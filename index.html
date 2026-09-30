@@ -8,67 +8,52 @@
 <style>
 body {
   font-family: Arial, sans-serif;
-  background:#f5f5f5;
-  margin:0;
-  padding:20px;
+  background: #f4f4f4;
+  padding: 15px;
 }
-
-h1 {
-  text-align:center;
-  color:#222;
-}
-
 .container {
-  max-width:600px;
-  margin:auto;
-  background:white;
-  padding:20px;
-  border-radius:15px;
-  box-shadow:0 2px 10px #ccc;
+  max-width: 650px;
+  margin: auto;
+  background: white;
+  padding: 20px;
+  border-radius: 15px;
 }
-
-.info {
-  background:#eee;
-  padding:10px;
-  border-radius:10px;
-  margin-bottom:15px;
-}
-
-table {
-  width:100%;
-  border-collapse:collapse;
-}
-
-th {
-  background:#222;
-  color:white;
-  padding:10px;
-}
-
-td {
-  border-bottom:1px solid #ddd;
-  padding:10px;
+h1 { text-align:center; }
+.resumen {
   text-align:center;
+  font-size:18px;
+  margin-bottom:20px;
 }
-
+input {
+  width:100%;
+  padding:12px;
+  font-size:16px;
+  box-sizing:border-box;
+  margin-bottom:10px;
+}
 button {
+  width:100%;
+  padding:12px;
+  font-size:16px;
   background:#222;
   color:white;
   border:0;
-  padding:10px 15px;
   border-radius:8px;
+  margin-bottom:15px;
 }
-
-.pagado {
-  background:#d9ffd9;
+.participante {
+  padding:11px;
+  border-bottom:1px solid #ddd;
 }
-
-.fecha {
-  font-size:12px;
-  color:#555;
+.numero {
+  display:inline-block;
+  width:35px;
+  color:#777;
+}
+.nombre {
+  font-weight:bold;
 }
 </style>
-
 </head>
 
 <body>
@@ -77,147 +62,171 @@ button {
 
 <h1>🏆 PORRA</h1>
 
-<div class="info">
-<strong>Importe:</strong> 50 € por persona
-<br>
-<strong>Total recaudado:</strong> <span id="total">0</span> €
+<div class="resumen">
+Participantes: <strong id="total"></strong><br>
+Total recaudado: <strong id="recaudado"></strong>
 </div>
 
-<table>
-<thead>
-<tr>
-<th>Nº</th>
-<th>Participante</th>
-<th>Pago</th>
-</tr>
-</thead>
+<input id="nuevoNombre"
+       placeholder="Nombre del nuevo participante">
 
-<tbody id="lista"></tbody>
-</table>
+<button onclick="anadirParticipante()">
+Añadir participante
+</button>
 
-<br>
-
-<button onclick="añadir()">➕ Añadir participante</button>
+<div id="lista"></div>
 
 </div>
 
 <script>
 
-let participantes = [
-"Alejandro",
-"Antonio",
-"Carlos",
-"Cristina",
-"David",
-"Diego",
-"Eduardo",
-"Fernando",
-"Francisco",
-"Gabriel",
-"Gemma",
-"Gonzalo",
-"Guillermo",
-"Javier",
-"Jesús",
-"Jorge",
-"José",
-"Juan",
-"Luis",
-"Manuel",
-"María",
-"Marta",
-"Miguel",
-"Nacho",
-"Óscar",
-"Pablo",
-"Patricia",
-"Pedro",
-"Rafael",
-"Raúl",
-"Ricardo",
-"Roberto",
-"Samuel",
-"Sandra",
-"Sergio",
-"Silvia",
-"Susana",
-"Tomás",
-"Víctor",
-"Álvaro"
+const listaCorrecta = [
+"Andrés Ruiz",
+"Andrés Vallejo",
+"Antonio Casero",
+"Antonio Cecilia",
+"Antonio Machuca",
+"Benji Caravallo",
+"Chuli",
+"Cristóbal García",
+"Diego Lozano",
+"Dani Argentino",
+"Eloy Sánchez",
+"Fernando Domínguez Estebella",
+"Gustavo",
+"Hans",
+"Javi Osorio",
+"Jesús Leal",
+"José González",
+"José Pulido",
+"Joselu",
+"Juanele",
+"Manolo Manzano",
+"Máximo",
+"Miguel Toro",
+"Ortega",
+"José Nuño",
+"Alfonso Sempere",
+"Pedro Díaz",
+"Pepe Manzano",
+"Perea",
+"Javier Sánchez Cuevas",
+"Viru",
+"Giuseppe",
+"Juan Antonio Cuevas",
+"Miguel Meneses Ibáñez",
+"Juan Antonio",
+"Paco Machuca",
+"Emilio Rioja",
+"Félix Gómez",
+"Pepe Guerra",
+"Juan Díez"
 ];
 
-function cargar(){
+/*
+Esta versión cambia la clave de almacenamiento.
+Así NO recuperará la lista incorrecta anterior.
+*/
+const CLAVE = "participantesPorraCorrectosV2";
 
-let lista=document.getElementById("lista");
-lista.innerHTML="";
+let participantes =
+JSON.parse(localStorage.getItem(CLAVE));
 
-let total=0;
-
-participantes.forEach((nombre,index)=>{
-
-let pagado=localStorage.getItem("pago_"+nombre);
-
-if(pagado) total++;
-
-lista.innerHTML += `
-<tr class="${pagado?'pagado':''}">
-<td>${index+1}</td>
-<td>${nombre}</td>
-<td>
-<input type="checkbox" 
-${pagado?'checked':''}
-onclick="pagar('${nombre}')">
-${pagado?'<div class="fecha">'+pagado+'</div>':''}
-</td>
-</tr>
-`;
-
-});
-
-document.getElementById("total").innerHTML=total*50;
-
+if (!participantes) {
+  participantes = listaCorrecta.map(nombre => ({
+    nombre: nombre
+  }));
+  guardar();
 }
 
-
-function pagar(nombre){
-
-let check=localStorage.getItem("pago_"+nombre);
-
-if(check){
-
-localStorage.removeItem("pago_"+nombre);
-
-}else{
-
-let fecha=new Date().toLocaleString();
-
-localStorage.setItem("pago_"+nombre,fecha);
-
+function guardar() {
+  localStorage.setItem(
+    CLAVE,
+    JSON.stringify(participantes)
+  );
 }
 
-cargar();
-
+function ordenar() {
+  participantes.sort((a,b) =>
+    a.nombre.localeCompare(
+      b.nombre,
+      "es",
+      {sensitivity:"base"}
+    )
+  );
 }
 
+function mostrar() {
 
-function añadir(){
+  ordenar();
 
-let nuevo=prompt("Nombre del participante:");
+  const lista =
+    document.getElementById("lista");
 
-if(nuevo){
+  lista.innerHTML = "";
 
-participantes.push(nuevo);
+  participantes.forEach((p,index) => {
 
-participantes.sort();
+    const div =
+      document.createElement("div");
 
-cargar();
+    div.className = "participante";
 
+    div.innerHTML =
+      '<span class="numero">' +
+      (index + 1) +
+      '.</span>' +
+      '<span class="nombre">' +
+      p.nombre +
+      '</span>';
+
+    lista.appendChild(div);
+  });
+
+  document.getElementById("total").textContent =
+    participantes.length;
+
+  document.getElementById("recaudado").textContent =
+    (participantes.length * 50) + " €";
+
+  guardar();
 }
 
+function anadirParticipante() {
+
+  const input =
+    document.getElementById("nuevoNombre");
+
+  const nombre =
+    input.value.trim();
+
+  if (!nombre) return;
+
+  const existe =
+    participantes.some(p =>
+      p.nombre.localeCompare(
+        nombre,
+        "es",
+        {sensitivity:"base"}
+      ) === 0
+    );
+
+  if (existe) {
+    alert("Ese participante ya existe");
+    return;
+  }
+
+  participantes.push({
+    nombre:nombre
+  });
+
+  input.value = "";
+
+  guardar();
+  mostrar();
 }
 
-
-cargar();
+mostrar();
 
 </script>
 
