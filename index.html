@@ -1,66 +1,225 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="es">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>PORRA</title>
+
 <style>
-:root{--bg:#f4f6f8;--card:#fff;--text:#111827;--muted:#6b7280;--green:#16803c;--red:#b42318;--blue:#1d4ed8}
-*{box-sizing:border-box}body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:var(--bg);color:var(--text)}
-main{max-width:760px;margin:auto;padding:20px 14px 50px}h1{text-align:center;margin:8px 0 4px;font-size:32px}.sub{text-align:center;color:var(--muted);margin-bottom:18px}
-.summary{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px}.box{background:var(--card);border-radius:14px;padding:12px;text-align:center;box-shadow:0 1px 5px #0001}.box b{display:block;font-size:20px}.box span{font-size:12px;color:var(--muted)}
-.controls{display:flex;gap:8px;margin-bottom:12px}.controls input{flex:1;border:1px solid #d1d5db;border-radius:12px;padding:13px;font-size:16px}.controls button,.add button{border:0;border-radius:12px;padding:12px 14px;font-weight:700;background:var(--blue);color:#fff}
-.add{display:flex;gap:8px;margin-bottom:14px}.add input{flex:1;border:1px solid #d1d5db;border-radius:12px;padding:13px;font-size:16px}
-.person{background:var(--card);border-radius:14px;padding:13px;margin:8px 0;display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center;box-shadow:0 1px 5px #0001}.name{font-weight:700;font-size:17px}.date{font-size:12px;color:var(--muted);margin-top:4px}.pay{border:0;border-radius:11px;padding:11px 13px;font-weight:700;background:var(--green);color:white;min-width:92px}.paid{background:#e8f5ec}.paid .pay{background:var(--red)}.empty{text-align:center;color:var(--muted);padding:25px}
-.note{text-align:center;color:var(--muted);font-size:12px;margin-top:18px}
+body {
+  font-family: Arial, sans-serif;
+  background:#f5f5f5;
+  margin:0;
+  padding:20px;
+}
+
+h1 {
+  text-align:center;
+  color:#222;
+}
+
+.container {
+  max-width:600px;
+  margin:auto;
+  background:white;
+  padding:20px;
+  border-radius:15px;
+  box-shadow:0 2px 10px #ccc;
+}
+
+.info {
+  background:#eee;
+  padding:10px;
+  border-radius:10px;
+  margin-bottom:15px;
+}
+
+table {
+  width:100%;
+  border-collapse:collapse;
+}
+
+th {
+  background:#222;
+  color:white;
+  padding:10px;
+}
+
+td {
+  border-bottom:1px solid #ddd;
+  padding:10px;
+  text-align:center;
+}
+
+button {
+  background:#222;
+  color:white;
+  border:0;
+  padding:10px 15px;
+  border-radius:8px;
+}
+
+.pagado {
+  background:#d9ffd9;
+}
+
+.fecha {
+  font-size:12px;
+  color:#555;
+}
 </style>
+
 </head>
-<body><main>
-<h1>PORRA</h1><div class="sub">Control de pagos · 50 € por persona</div>
-<div class="summary">
- <div class="box"><b id="people">0</b><span>Participantes</span></div>
- <div class="box"><b id="paid">0</b><span>Pagados</span></div>
- <div class="box"><b id="total">0 €</b><span>Recaudado</span></div>
+
+<body>
+
+<div class="container">
+
+<h1>🏆 PORRA</h1>
+
+<div class="info">
+<strong>Importe:</strong> 50 € por persona
+<br>
+<strong>Total recaudado:</strong> <span id="total">0</span> €
 </div>
-<div class="controls"><input id="search" placeholder="Buscar pagador…" oninput="render()"></div>
-<div class="add"><input id="newName" placeholder="Nombre del nuevo pagador"><button onclick="addPerson()">Añadir</button></div>
-<div id="list"></div>
-<div class="note">Los datos quedan guardados en este dispositivo.</div>
-</main>
+
+<table>
+<thead>
+<tr>
+<th>Nº</th>
+<th>Participante</th>
+<th>Pago</th>
+</tr>
+</thead>
+
+<tbody id="lista"></tbody>
+</table>
+
+<br>
+
+<button onclick="añadir()">➕ Añadir participante</button>
+
+</div>
+
 <script>
-const KEY='porra-pagos-v1';
-let data=JSON.parse(localStorage.getItem(KEY)||'[]');
-function save(){localStorage.setItem(KEY,JSON.stringify(data));render()}
-function addPerson(){
- const i=document.getElementById('newName'), n=i.value.trim();
- if(!n)return;
- data.push({id:Date.now(),name:n,paid:false,date:null}); i.value=''; save();
+
+let participantes = [
+"Alejandro",
+"Antonio",
+"Carlos",
+"Cristina",
+"David",
+"Diego",
+"Eduardo",
+"Fernando",
+"Francisco",
+"Gabriel",
+"Gemma",
+"Gonzalo",
+"Guillermo",
+"Javier",
+"Jesús",
+"Jorge",
+"José",
+"Juan",
+"Luis",
+"Manuel",
+"María",
+"Marta",
+"Miguel",
+"Nacho",
+"Óscar",
+"Pablo",
+"Patricia",
+"Pedro",
+"Rafael",
+"Raúl",
+"Ricardo",
+"Roberto",
+"Samuel",
+"Sandra",
+"Sergio",
+"Silvia",
+"Susana",
+"Tomás",
+"Víctor",
+"Álvaro"
+];
+
+function cargar(){
+
+let lista=document.getElementById("lista");
+lista.innerHTML="";
+
+let total=0;
+
+participantes.forEach((nombre,index)=>{
+
+let pagado=localStorage.getItem("pago_"+nombre);
+
+if(pagado) total++;
+
+lista.innerHTML += `
+<tr class="${pagado?'pagado':''}">
+<td>${index+1}</td>
+<td>${nombre}</td>
+<td>
+<input type="checkbox" 
+${pagado?'checked':''}
+onclick="pagar('${nombre}')">
+${pagado?'<div class="fecha">'+pagado+'</div>':''}
+</td>
+</tr>
+`;
+
+});
+
+document.getElementById("total").innerHTML=total*50;
+
 }
-function toggle(id){
- const p=data.find(x=>x.id===id); if(!p)return;
- if(p.paid){if(!confirm('¿Anular el pago de '+p.name+'?'))return;p.paid=false;p.date=null}
- else {p.paid=true;p.date=new Date().toLocaleString('es-ES')}
- save();
+
+
+function pagar(nombre){
+
+let check=localStorage.getItem("pago_"+nombre);
+
+if(check){
+
+localStorage.removeItem("pago_"+nombre);
+
+}else{
+
+let fecha=new Date().toLocaleString();
+
+localStorage.setItem("pago_"+nombre,fecha);
+
 }
-function render(){
- const q=document.getElementById('search').value.toLowerCase();
- const list=document.getElementById('list'); list.innerHTML='';
- const filtered=data.filter(p=>p.name.toLowerCase().includes(q));
- filtered.forEach(p=>{
-  const d=document.createElement('div'); d.className='person '+(p.paid?'paid':'');
-  d.innerHTML=`<div><div class="name">${escapeHtml(p.name)}</div><div class="date">${p.paid?'Pagado: '+p.date:'Pendiente · 50 €'}</div></div>
-  <button class="pay" onclick="toggle(${p.id})">${p.paid?'Anular':'Pagado'}</button>`;
-  list.appendChild(d);
- });
- if(!filtered.length) list.innerHTML='<div class="empty">Añade el primer pagador.</div>';
- const n=data.filter(x=>x.paid).length;
- document.getElementById('people').textContent=data.length;
- document.getElementById('paid').textContent=n;
- document.getElementById('total').textContent=(n*50)+' €';
+
+cargar();
+
 }
-function escapeHtml(s){return s.replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]))}
-document.getElementById('newName').addEventListener('keydown',e=>{if(e.key==='Enter')addPerson()});
-render();
-</script></body></html>
+
+
+function añadir(){
+
+let nuevo=prompt("Nombre del participante:");
+
+if(nuevo){
+
+participantes.push(nuevo);
+
+participantes.sort();
+
+cargar();
+
+}
+
+}
+
+
+cargar();
+
+</script>
+
+</body>
+</html>
