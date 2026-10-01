@@ -488,5 +488,119 @@ document.getElementById("nuevoNombre").addEventListener("keydown", e => {
 
 mostrar();
 </script>
+  <style>
+#informePDF { display: none; }
+
+#botonPDF {
+  width: 100%;
+  padding: 14px;
+  margin: 12px 0;
+  background: #1764c0;
+  color: white;
+  border-radius: 12px;
+  font-size: 16px;
+}
+
+@media print {
+  body > * { display: none !important; }
+  body > #informePDF { display: block !important; }
+  body { background: white; padding: 0; }
+  #informePDF { font-family: Arial, sans-serif; }
+  #informePDF table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+  }
+  #informePDF th, #informePDF td {
+    border: 1px solid #ccc;
+    padding: 8px;
+    text-align: left;
+  }
+  #informePDF th { background: #eee; }
+  #informePDF tr { break-inside: avoid; }
+}
+</style>
+
+<script>
+(function () {
+  const boton = document.createElement("button");
+  boton.id = "botonPDF";
+  boton.type = "button";
+  boton.textContent = "📄 Guardar PDF del listado filtrado";
+  document.getElementById("lista").before(boton);
+
+  boton.onclick = function () {
+    const anterior = document.getElementById("informePDF");
+    if (anterior) anterior.remove();
+
+    const seleccion = Array.from(
+      document.getElementById("lista").children
+    ).flatMap((fila, indice) =>
+      fila.style.display === "none"
+        ? []
+        : [participantes[indice]]
+    );
+
+    const informe = document.createElement("div");
+    informe.id = "informePDF";
+
+    const titulo = document.createElement("h1");
+    titulo.textContent = "PORRA · Control de pagos";
+
+    const detalle = document.createElement("p");
+    const filtro = document.getElementById("filtroPago");
+    const busqueda = document.getElementById("buscarParticipante");
+    detalle.textContent =
+      "Fecha: " + new Date().toLocaleDateString("es-ES") +
+      " · Filtro: " + filtro.options[filtro.selectedIndex].text +
+      (busqueda.value.trim()
+        ? " · Búsqueda: " + busqueda.value.trim()
+        : "");
+
+    const tabla = document.createElement("table");
+    const cabecera = tabla.createTHead().insertRow();
+    ["Nombre", "Cantidad", "Estado", "Fecha de pago"]
+      .forEach(texto => {
+        const celda = document.createElement("th");
+        celda.textContent = texto;
+        cabecera.appendChild(celda);
+      });
+
+    const cuerpo = tabla.createTBody();
+    const euros = valor => Number(valor).toLocaleString(
+      "es-ES",
+      { style: "currency", currency: "EUR" }
+    );
+
+    seleccion.forEach(p => {
+      const fila = cuerpo.insertRow();
+      const fecha = p.pagado && p.fechaPago
+        ? p.fechaPago.split("-").reverse().join("/")
+        : "—";
+
+      [
+        p.nombre,
+        euros(PRECIO),
+        p.pagado ? "Pagado" : "Pendiente",
+        fecha
+      ].forEach(valor => {
+        fila.insertCell().textContent = valor;
+      });
+    });
+
+    const pagados = seleccion.filter(p => p.pagado).length;
+    const resumen = document.createElement("p");
+    resumen.textContent =
+      "Participantes: " + seleccion.length +
+      " · Recaudado: " + euros(pagados * PRECIO) +
+      " · Pendiente: " +
+      euros((seleccion.length - pagados) * PRECIO);
+
+    informe.append(titulo, detalle, tabla, resumen);
+    document.body.appendChild(informe);
+    window.print();
+  };
+})();
+</script>
 </body>
 </html>
