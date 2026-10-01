@@ -136,7 +136,52 @@ button {
 </div>
 
 <script>
-const PRECIO = 50;
+let PRECIO = 50;
+
+try {
+  const importe = localStorage.getItem("importePorra");
+  if (importe !== null && Number.isFinite(Number(importe)) &&
+      Number(importe) >= 0) {
+    PRECIO = Number(importe);
+  }
+} catch (e) {}
+
+const tituloPagos = document.querySelector("h2");
+tituloPagos.textContent = "Control de pagos";
+
+const etiquetaImporte = document.createElement("label");
+etiquetaImporte.textContent = "Cantidad por participante (€): ";
+
+const campoImporte = document.createElement("input");
+campoImporte.type = "number";
+campoImporte.min = "0";
+campoImporte.step = "0.01";
+campoImporte.value = PRECIO;
+campoImporte.style.width = "120px";
+
+campoImporte.onchange = () => {
+  const cantidad = Number(campoImporte.value);
+
+  if (campoImporte.value.trim() === "" ||
+      !Number.isFinite(cantidad) || cantidad < 0) {
+    campoImporte.value = PRECIO;
+    return;
+  }
+
+  PRECIO = Math.round(cantidad * 100) / 100;
+  campoImporte.value = PRECIO;
+
+  try {
+    localStorage.setItem("importePorra", String(PRECIO));
+  } catch (e) {
+    alert("No se ha podido guardar la cantidad.");
+  }
+
+  mostrar();
+};
+
+etiquetaImporte.appendChild(campoImporte);
+tituloPagos.after(etiquetaImporte);
 const CLAVE = "participantesPorraCorrectosV2";
 
 const listaCorrecta = [
