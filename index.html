@@ -40,19 +40,15 @@ h2 { margin: 24px 0 12px; font-size: 20px; }
   font-size: 20px;
   margin-top: 4px;
 }
-.form {
-  display: flex;
-  gap: 8px;
-  margin-bottom: 18px;
-}
+.form { display: flex; gap: 8px; margin-bottom: 18px; }
 input {
-  flex: 1;
   min-width: 0;
   padding: 12px;
   font-size: 16px;
   border: 1px solid #ccc;
   border-radius: 8px;
 }
+#nuevoNombre { flex: 1; }
 button {
   border: 0;
   border-radius: 8px;
@@ -60,22 +56,25 @@ button {
   font-size: 15px;
   font-weight: bold;
 }
-.anadir {
-  padding: 12px 16px;
-  background: #222;
-  color: white;
-}
+.anadir { padding: 12px 16px; background: #222; color: white; }
 .participante {
   display: grid;
-  grid-template-columns: 34px 1fr auto auto;
+  grid-template-columns: 28px 1fr auto;
   align-items: center;
-  gap: 8px;
-  padding: 10px 0;
+  gap: 10px;
+  padding: 14px 0;
   border-bottom: 1px solid #e5e5e5;
 }
 .numero { color: #777; }
 .nombre { font-weight: bold; overflow-wrap: anywhere; }
-.pago { padding: 8px 10px; min-width: 92px; }
+.acciones {
+  grid-column: 2 / 4;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+.pago { padding: 10px; min-width: 100px; }
 .pagado { background: #16863b; color: white; }
 .pendiente { background: #d98a00; color: white; }
 .borrar {
@@ -85,18 +84,25 @@ button {
   height: 36px;
   font-size: 18px;
 }
+.fecha {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: #555;
+}
+.fecha input { padding: 8px; max-width: 180px; }
 .leyenda {
   color: #666;
   font-size: 13px;
   margin-top: 14px;
-  text-align: center;
+  line-height: 1.5;
 }
+#aviso { color: #b42318; font-weight: bold; }
 @media (max-width: 520px) {
   .form { flex-direction: column; }
   .anadir { width: 100%; }
-  .participante { grid-template-columns: 28px 1fr auto; }
-  .pago { min-width: 86px; font-size: 13px; }
-  .borrar { grid-column: 3; width: 100%; height: 32px; }
 }
 </style>
 </head>
@@ -113,17 +119,20 @@ button {
 
   <div class="form">
     <input id="nuevoNombre"
-           placeholder="Nombre del nuevo participante"
-           autocomplete="off">
+      placeholder="Nombre del nuevo participante"
+      aria-label="Nombre del nuevo participante"
+      autocomplete="off">
     <button class="anadir" onclick="anadirParticipante()">Añadir</button>
   </div>
 
   <h2>Control de pagos · 50 €</h2>
+  <p id="aviso" role="alert"></p>
   <div id="lista"></div>
-  <div class="leyenda">
-    Pulsa “Pendiente” para marcar como pagado.
-    Los cambios se guardan en este navegador y dispositivo.
-  </div>
+  <p class="leyenda">
+    Pulsa «Pendiente» para registrar el pago con la fecha de hoy.
+    Puedes cambiar la fecha.
+    Los cambios se guardan en este dispositivo y navegador.
+  </p>
 </div>
 
 <script>
@@ -158,119 +167,186 @@ const listaCorrecta = [
   "Viru"
 ];
 
-let participantes;
+let participantes = [];
+let almacenamientoDisponible = true;
+
+function avisar(texto) {
+  document.getElementById("aviso").textContent = texto;
+}
+
+function fechaValida(fecha) {
+  if (typeof fecha !== "string" ||
+      !/^\d{4}-\d{2}-\d{2}$/.test(fecha)) return false;
+  const d = new Date(fecha + "T12:00:00Z");
+  return !isNaN(d.getTime()) &&
+    d.toISOString().slice(0, 10) === fecha;
+}
+
 try {
-  participantes = JSON.parse(localStorage.getItem(CLAVE));
-} catch (e) {
-  participantes = null;
-}
-
-if (!Array.isArray(participantes)) {
-  participantes = listaCorrecta.map(nombre => ({
-    nombre,
-    pagado: false
-  }));
-} else {
-  participantes = participantes
-    .filter(p => p && typeof p.nombre === "string")
-    .map(p => ({
-      nombre: p.nombre,
-      pagado: p.pagado === true
+  const guardado = localStorage.getItem(CLAVE);
+  if (guardado === null) {
+    participantes = listaCorrecta.map(nombre => ({
+      nombre, pagado: false, fechaPago: ""
     }));
-}
-
-function guardar() {
-  try {
-    localStorage.setItem(CLAVE, JSON.stringify(participantes));
-  } catch (e) {
-    document.querySelector(".leyenda").textContent =
-      "No se han podido guardar los cambios. No cierres esta página.";
+  } else {
+    const datos = JSON.parse(guardado);
+    if (!Array.isArray(datos) ||
+        datos.some(p => !p || typeof p.nombre !== "string")) {
+      throw new Error("Datos no válidos");
+    }
+    participantes = datos.map(p => ({
+      ...p,
+      pagado: p.pagado === true,
+      fechaPago: fechaValida(p.fechaPago) ? p.fechaPago : ""
+    }));
   }
-}
-
-function ordenar() {
-  participantes.sort((a, b) =>
-    a.nombre.localeCompare(b.nombre, "es", {
-      sensitivity: "base"
-    })
+} catch (e) {
+  almacenamientoDisponible = false;
+  avisar(
+    "No se pueden leer los datos guardados. No se han sobrescrito. " +
+    "Vuelve a abrir la web en el navegador donde registraste los pagos."
   );
 }
 
-function escapar(texto) {
-  return String(texto)
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#039;");
+function hoy() {
+  const d = new Date();
+  return d.getFullYear() + "-" +
+    String(d.getMonth() + 1).padStart(2, "0") + "-" +
+    String(d.getDate()).padStart(2, "0");
+}
+
+function guardar() {
+  if (!almacenamientoDisponible) return false;
+  try {
+    localStorage.setItem(CLAVE, JSON.stringify(participantes));
+    avisar("");
+    return true;
+  } catch (e) {
+    avisar(
+      "No se ha podido guardar el cambio. " +
+      "No cierres esta página hasta resolverlo."
+    );
+    return false;
+  }
 }
 
 function mostrar() {
-  ordenar();
+  participantes.sort((a, b) =>
+    a.nombre.localeCompare(b.nombre, "es", { sensitivity: "base" })
+  );
+
   const lista = document.getElementById("lista");
-  lista.innerHTML = "";
+  lista.replaceChildren();
 
   participantes.forEach((p, index) => {
-    const div = document.createElement("div");
-    div.className = "participante";
-    div.innerHTML = `
-      <span class="numero">${index + 1}.</span>
-      <span class="nombre">${escapar(p.nombre)}</span>
-      <button class="pago ${p.pagado ? "pagado" : "pendiente"}"
-              onclick="cambiarPago(${index})">
-        ${p.pagado ? "✓ Pagado" : "Pendiente"}
-      </button>
-      <button class="borrar"
-              onclick="borrarParticipante(${index})"
-              aria-label="Borrar ${escapar(p.nombre)}">×</button>
-    `;
-    lista.appendChild(div);
+    const fila = document.createElement("div");
+    fila.className = "participante";
+
+    const numero = document.createElement("span");
+    numero.className = "numero";
+    numero.textContent = (index + 1) + ".";
+
+    const nombre = document.createElement("span");
+    nombre.className = "nombre";
+    nombre.textContent = p.nombre;
+
+    const borrar = document.createElement("button");
+    borrar.className = "borrar";
+    borrar.textContent = "×";
+    borrar.setAttribute("aria-label", "Borrar a " + p.nombre);
+    borrar.onclick = () => borrarParticipante(index);
+
+    const acciones = document.createElement("div");
+    acciones.className = "acciones";
+
+    const pago = document.createElement("button");
+    pago.className = "pago " + (p.pagado ? "pagado" : "pendiente");
+    pago.textContent = p.pagado ? "✓ Pagado" : "Pendiente";
+    pago.onclick = () => cambiarPago(index);
+    acciones.appendChild(pago);
+
+    if (p.pagado) {
+      const etiqueta = document.createElement("label");
+      etiqueta.className = "fecha";
+      etiqueta.appendChild(document.createTextNode("Fecha de pago: "));
+
+      const fecha = document.createElement("input");
+      fecha.type = "date";
+      fecha.value = p.fechaPago;
+      fecha.setAttribute("aria-label", "Fecha de pago de " + p.nombre);
+      fecha.onchange = () => {
+        p.fechaPago = fecha.value;
+        guardar();
+        mostrar();
+      };
+      etiqueta.appendChild(fecha);
+      acciones.appendChild(etiqueta);
+
+      if (!p.fechaPago) {
+        const nota = document.createElement("span");
+        nota.className = "fecha";
+        nota.textContent = "Fecha sin indicar";
+        acciones.appendChild(nota);
+      }
+    }
+
+    fila.append(numero, nombre, borrar, acciones);
+    lista.appendChild(fila);
   });
 
-  const numPagados = participantes.filter(p => p.pagado).length;
-  const numPendientes = participantes.length - numPagados;
-
+  const pagados = participantes.filter(p => p.pagado).length;
   document.getElementById("total").textContent = participantes.length;
   document.getElementById("pagados").textContent =
-    numPagados + " / " + participantes.length;
+    pagados + " / " + participantes.length;
   document.getElementById("recaudado").textContent =
-    (numPagados * PRECIO) + " €";
+    (pagados * PRECIO) + " €";
   document.getElementById("pendiente").textContent =
-    (numPendientes * PRECIO) + " €";
-
-  guardar();
+    ((participantes.length - pagados) * PRECIO) + " €";
 }
 
 function cambiarPago(index) {
-  participantes[index].pagado = !participantes[index].pagado;
+  if (!almacenamientoDisponible) return;
+  const p = participantes[index];
+
+  if (p.pagado) {
+    if (!confirm("¿Marcar a " + p.nombre +
+      " como pendiente y quitar su fecha de pago?")) return;
+    p.pagado = false;
+    p.fechaPago = "";
+  } else {
+    p.pagado = true;
+    p.fechaPago = hoy();
+  }
+
+  guardar();
   mostrar();
 }
 
 function anadirParticipante() {
+  if (!almacenamientoDisponible) return;
   const input = document.getElementById("nuevoNombre");
   const nombre = input.value.trim();
   if (!nombre) return;
 
-  const existe = participantes.some(p =>
-    p.nombre.localeCompare(nombre, "es", {
-      sensitivity: "base"
-    }) === 0
-  );
-
-  if (existe) {
-    alert("Ese participante ya existe");
+  if (participantes.some(p =>
+    p.nombre.localeCompare(nombre, "es", { sensitivity: "base" }) === 0
+  )) {
+    alert("Ese participante ya existe.");
     return;
   }
 
-  participantes.push({ nombre, pagado: false });
+  participantes.push({ nombre, pagado: false, fechaPago: "" });
   input.value = "";
+  guardar();
   mostrar();
 }
 
 function borrarParticipante(index) {
-  const nombre = participantes[index].nombre;
-  if (!confirm("¿Borrar a " + nombre + "?")) return;
+  if (!almacenamientoDisponible) return;
+  const p = participantes[index];
+  if (!confirm("¿Borrar a " + p.nombre + " y su registro de pago?")) return;
   participantes.splice(index, 1);
+  guardar();
   mostrar();
 }
 
