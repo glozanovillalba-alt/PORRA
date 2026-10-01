@@ -134,7 +134,90 @@ button {
     Los cambios se guardan en este dispositivo y navegador.
   </p>
 </div>
+// Buscador y filtro de pagos
+const controlesBusqueda = document.createElement("div");
+controlesBusqueda.style.cssText =
+  "display:flex;flex-wrap:wrap;gap:10px;margin:20px 0 10px;";
 
+controlesBusqueda.innerHTML = `
+  <input
+    id="buscarParticipante"
+    type="search"
+    placeholder="🔍 Buscar participante"
+    aria-label="Buscar participante"
+    style="flex:1;min-width:180px;width:100%;"
+  >
+  <select
+    id="filtroPago"
+    aria-label="Filtrar por estado del pago"
+    style="padding:12px;font-size:16px;border:1px solid #ccc;
+           border-radius:8px;background:white;min-height:44px;"
+  >
+    <option value="todos">Todos</option>
+    <option value="pagados">Pagados</option>
+    <option value="pendientes">No pagados</option>
+  </select>
+`;
+
+const listaBusqueda = document.getElementById("lista");
+listaBusqueda.before(controlesBusqueda);
+
+const resultadoBusqueda = document.createElement("p");
+resultadoBusqueda.style.cssText =
+  "font-size:14px;color:#666;margin:8px 0;";
+resultadoBusqueda.setAttribute("role", "status");
+listaBusqueda.before(resultadoBusqueda);
+
+function normalizarNombre(texto) {
+  return texto.normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLocaleLowerCase("es")
+    .trim();
+}
+
+function aplicarFiltros() {
+  const texto = normalizarNombre(
+    document.getElementById("buscarParticipante").value
+  );
+  const estado = document.getElementById("filtroPago").value;
+  let visibles = 0;
+
+  Array.from(listaBusqueda.children).forEach((fila, index) => {
+    const participante = participantes[index];
+
+    const coincideNombre =
+      normalizarNombre(participante.nombre).includes(texto);
+
+    const coincidePago =
+      estado === "todos" ||
+      (estado === "pagados" && participante.pagado) ||
+      (estado === "pendientes" && !participante.pagado);
+
+    const visible = coincideNombre && coincidePago;
+    fila.style.display = visible ? "" : "none";
+    if (visible) visibles++;
+  });
+
+  resultadoBusqueda.textContent = visibles === 0
+    ? "No hay participantes con esa búsqueda o filtro."
+    : "Mostrando " + visibles + " de " +
+      participantes.length + " participantes";
+}
+
+document.getElementById("buscarParticipante")
+  .addEventListener("input", aplicarFiltros);
+
+document.getElementById("filtroPago")
+  .addEventListener("change", aplicarFiltros);
+
+// Mantener el filtro al añadir, borrar o cambiar un pago
+const mostrarSinFiltros = mostrar;
+mostrar = function () {
+  mostrarSinFiltros();
+  aplicarFiltros();
+};
+
+mostrar();
 <script>
 let PRECIO = 50;
 
