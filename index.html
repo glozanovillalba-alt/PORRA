@@ -3,217 +3,282 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>PORRA</title>
-
+<title>PORRA - Control de pagos</title>
 <style>
+* { box-sizing: border-box; }
 body {
   font-family: Arial, sans-serif;
   background: #f4f4f4;
+  margin: 0;
   padding: 15px;
+  color: #222;
 }
 .container {
-  max-width: 650px;
+  max-width: 720px;
   margin: auto;
   background: white;
   padding: 20px;
   border-radius: 15px;
+  box-shadow: 0 2px 12px rgba(0,0,0,.08);
 }
-h1 { text-align:center; }
+h1 { text-align: center; margin: 5px 0 18px; }
+h2 { margin: 24px 0 12px; font-size: 20px; }
 .resumen {
-  text-align:center;
-  font-size:18px;
-  margin-bottom:20px;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+  margin-bottom: 20px;
+}
+.dato {
+  background: #f6f6f6;
+  padding: 12px;
+  border-radius: 10px;
+  text-align: center;
+}
+.dato strong {
+  display: block;
+  font-size: 20px;
+  margin-top: 4px;
+}
+.form {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 18px;
 }
 input {
-  width:100%;
-  padding:12px;
-  font-size:16px;
-  box-sizing:border-box;
-  margin-bottom:10px;
+  flex: 1;
+  min-width: 0;
+  padding: 12px;
+  font-size: 16px;
+  border: 1px solid #ccc;
+  border-radius: 8px;
 }
 button {
-  width:100%;
-  padding:12px;
-  font-size:16px;
-  background:#222;
-  color:white;
-  border:0;
-  border-radius:8px;
-  margin-bottom:15px;
+  border: 0;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 15px;
+  font-weight: bold;
+}
+.anadir {
+  padding: 12px 16px;
+  background: #222;
+  color: white;
 }
 .participante {
-  padding:11px;
-  border-bottom:1px solid #ddd;
+  display: grid;
+  grid-template-columns: 34px 1fr auto auto;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 0;
+  border-bottom: 1px solid #e5e5e5;
 }
-.numero {
-  display:inline-block;
-  width:35px;
-  color:#777;
+.numero { color: #777; }
+.nombre { font-weight: bold; overflow-wrap: anywhere; }
+.pago { padding: 8px 10px; min-width: 92px; }
+.pagado { background: #16863b; color: white; }
+.pendiente { background: #d98a00; color: white; }
+.borrar {
+  background: #b42318;
+  color: white;
+  width: 38px;
+  height: 36px;
+  font-size: 18px;
 }
-.nombre {
-  font-weight:bold;
+.leyenda {
+  color: #666;
+  font-size: 13px;
+  margin-top: 14px;
+  text-align: center;
+}
+@media (max-width: 520px) {
+  .form { flex-direction: column; }
+  .anadir { width: 100%; }
+  .participante { grid-template-columns: 28px 1fr auto; }
+  .pago { min-width: 86px; font-size: 13px; }
+  .borrar { grid-column: 3; width: 100%; height: 32px; }
 }
 </style>
 </head>
-
 <body>
-
 <div class="container">
+  <h1>🏆 PORRA</h1>
 
-<h1>🏆 PORRA</h1>
+  <div class="resumen">
+    <div class="dato">Participantes<strong id="total">0</strong></div>
+    <div class="dato">Pagados<strong id="pagados">0</strong></div>
+    <div class="dato">Recaudado<strong id="recaudado">0 €</strong></div>
+    <div class="dato">Pendiente<strong id="pendiente">0 €</strong></div>
+  </div>
 
-<div class="resumen">
-Participantes: <strong id="total"></strong><br>
-Total recaudado: <strong id="recaudado"></strong>
-</div>
+  <div class="form">
+    <input id="nuevoNombre"
+           placeholder="Nombre del nuevo participante"
+           autocomplete="off">
+    <button class="anadir" onclick="anadirParticipante()">Añadir</button>
+  </div>
 
-<input id="nuevoNombre"
-       placeholder="Nombre del nuevo participante">
-
-<button onclick="anadirParticipante()">
-Añadir participante
-</button>
-
-<div id="lista"></div>
-
+  <h2>Control de pagos · 50 €</h2>
+  <div id="lista"></div>
+  <div class="leyenda">
+    Pulsa “Pendiente” para marcar como pagado.
+    Los cambios se guardan en este navegador y dispositivo.
+  </div>
 </div>
 
 <script>
-
-const listaCorrecta = [
-"Alfonso Sempere",
-"Benja Carvalho",
-"Cristóbal García",
-"Dani Argentino",
-"Diego Lozano",
-"Eloy Sánchez",
-"Fernando Domínguez Estebell",
-"Gustavo",
-"Hans",
-"Javi Osorio",
-"Javier Sánchez Cuevas",
-"Jesús Leal",
-"José González",
-"José Nuño",
-"José Pulido",
-"Joselu",
-"Juanele",
-"Manolo Manzano",
-"Máximo",
-"Miguel Toro",
-"Ortega",
-"Pedro Díaz",
-"Pepe Manzano",
-"Perea",
-"Viru",
-];
-
-/*
-Esta versión cambia la clave de almacenamiento.
-Así NO recuperará la lista incorrecta anterior.
-*/
+const PRECIO = 50;
 const CLAVE = "participantesPorraCorrectosV2";
 
-let participantes =
-JSON.parse(localStorage.getItem(CLAVE));
+const listaCorrecta = [
+  "Alfonso Sempere",
+  "Benja Carvalho",
+  "Cristóbal García",
+  "Dani Argentino",
+  "Diego Lozano",
+  "Eloy Sánchez",
+  "Fernando Domínguez Estebell",
+  "Gustavo",
+  "Hans",
+  "Javi Osorio",
+  "Javier Sánchez Cuevas",
+  "Jesús Leal",
+  "José González",
+  "José Nuño",
+  "José Pulido",
+  "Joselu",
+  "Juanele",
+  "Manolo Manzano",
+  "Máximo",
+  "Miguel Toro",
+  "Ortega",
+  "Pedro Díaz",
+  "Pepe Manzano",
+  "Perea",
+  "Viru"
+];
 
-if (!participantes) {
+let participantes;
+try {
+  participantes = JSON.parse(localStorage.getItem(CLAVE));
+} catch (e) {
+  participantes = null;
+}
+
+if (!Array.isArray(participantes)) {
   participantes = listaCorrecta.map(nombre => ({
-    nombre: nombre
+    nombre,
+    pagado: false
   }));
-  guardar();
+} else {
+  participantes = participantes
+    .filter(p => p && typeof p.nombre === "string")
+    .map(p => ({
+      nombre: p.nombre,
+      pagado: p.pagado === true
+    }));
 }
 
 function guardar() {
-  localStorage.setItem(
-    CLAVE,
-    JSON.stringify(participantes)
-  );
+  try {
+    localStorage.setItem(CLAVE, JSON.stringify(participantes));
+  } catch (e) {
+    document.querySelector(".leyenda").textContent =
+      "No se han podido guardar los cambios. No cierres esta página.";
+  }
 }
 
 function ordenar() {
-  participantes.sort((a,b) =>
-    a.nombre.localeCompare(
-      b.nombre,
-      "es",
-      {sensitivity:"base"}
-    )
+  participantes.sort((a, b) =>
+    a.nombre.localeCompare(b.nombre, "es", {
+      sensitivity: "base"
+    })
   );
 }
 
+function escapar(texto) {
+  return String(texto)
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+}
+
 function mostrar() {
-
   ordenar();
-
-  const lista =
-    document.getElementById("lista");
-
+  const lista = document.getElementById("lista");
   lista.innerHTML = "";
 
-  participantes.forEach((p,index) => {
-
-    const div =
-      document.createElement("div");
-
+  participantes.forEach((p, index) => {
+    const div = document.createElement("div");
     div.className = "participante";
-
-    div.innerHTML =
-      '<span class="numero">' +
-      (index + 1) +
-      '.</span>' +
-      '<span class="nombre">' +
-      p.nombre +
-      '</span>';
-
+    div.innerHTML = `
+      <span class="numero">${index + 1}.</span>
+      <span class="nombre">${escapar(p.nombre)}</span>
+      <button class="pago ${p.pagado ? "pagado" : "pendiente"}"
+              onclick="cambiarPago(${index})">
+        ${p.pagado ? "✓ Pagado" : "Pendiente"}
+      </button>
+      <button class="borrar"
+              onclick="borrarParticipante(${index})"
+              aria-label="Borrar ${escapar(p.nombre)}">×</button>
+    `;
     lista.appendChild(div);
   });
 
-  document.getElementById("total").textContent =
-    participantes.length;
+  const numPagados = participantes.filter(p => p.pagado).length;
+  const numPendientes = participantes.length - numPagados;
 
+  document.getElementById("total").textContent = participantes.length;
+  document.getElementById("pagados").textContent =
+    numPagados + " / " + participantes.length;
   document.getElementById("recaudado").textContent =
-    (participantes.length * 50) + " €";
+    (numPagados * PRECIO) + " €";
+  document.getElementById("pendiente").textContent =
+    (numPendientes * PRECIO) + " €";
 
   guardar();
 }
 
+function cambiarPago(index) {
+  participantes[index].pagado = !participantes[index].pagado;
+  mostrar();
+}
+
 function anadirParticipante() {
-
-  const input =
-    document.getElementById("nuevoNombre");
-
-  const nombre =
-    input.value.trim();
-
+  const input = document.getElementById("nuevoNombre");
+  const nombre = input.value.trim();
   if (!nombre) return;
 
-  const existe =
-    participantes.some(p =>
-      p.nombre.localeCompare(
-        nombre,
-        "es",
-        {sensitivity:"base"}
-      ) === 0
-    );
+  const existe = participantes.some(p =>
+    p.nombre.localeCompare(nombre, "es", {
+      sensitivity: "base"
+    }) === 0
+  );
 
   if (existe) {
     alert("Ese participante ya existe");
     return;
   }
 
-  participantes.push({
-    nombre:nombre
-  });
-
-  input.value = ""; 
-
-  guardar();
+  participantes.push({ nombre, pagado: false });
+  input.value = "";
   mostrar();
 }
 
+function borrarParticipante(index) {
+  const nombre = participantes[index].nombre;
+  if (!confirm("¿Borrar a " + nombre + "?")) return;
+  participantes.splice(index, 1);
+  mostrar();
+}
+
+document.getElementById("nuevoNombre").addEventListener("keydown", e => {
+  if (e.key === "Enter") anadirParticipante();
+});
+
 mostrar();
-
 </script>
-
 </body>
 </html>
